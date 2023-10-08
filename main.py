@@ -1,5 +1,8 @@
+from typing import Union
+
 from fastapi import FastAPI
 from enum import Enum
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -42,9 +45,33 @@ async def read_item(skip: int = 0, limit: int = 10):
     return fake_items_db[skip: skip + limit]
 
 
-# 1.3 optioonal parameters
+# 1.3 optional query parameters
 @app.get("/itemsid/{item_id}")
 async def read_item(item_id: str, q: str = None):
     if q:
         return {"item_id": item_id, "q": q}
     return {"item_id": item_id}
+
+
+# 1.4 request body--- pydantic.BaseModel
+class Item(BaseModel):
+    name: str
+    description: str = None
+    price: float
+    tax: float = None
+
+
+@app.post("/items/")
+async def create_item(item: Item):
+    item_dict = item.model_dump()
+    if item.tax:
+        price_with_tax = item.price + item.tax
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+
+@app.get("/items/")
+async def read_items(q: Union[str, None]):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
